@@ -55,3 +55,9 @@ CATKIN_IGNORE
 # micro-ROS
 src/ros2.repos
 src/uros/
+# Development env
+.vscode
+
+# micro-ROS dir
+uros/*
+!uros/.gitignore
