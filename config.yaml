@@ -1,0 +1,15 @@
+cybergear:
+  speed: 1.0
+  mechanum: 
+    - 0.306 # * 2 = mecha_x size
+    - 0.270 # * 2 = mecha_y size
+    - 0.0635 # tire_r
+  offset: 
+    - 0 # joystick_x offset
+    - 0 # joystick_y offset
+    - 0 # joystick_w offset
+  joy_max: 128
+  joy_min: -128
+
+servo:
+  angle: 40

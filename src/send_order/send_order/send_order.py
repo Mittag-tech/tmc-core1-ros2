@@ -5,6 +5,33 @@ from std_msgs.msg import Float32MultiArray
 import sys
 import serial
 import numpy as np
+import yaml
+from pathlib import Path
+
+BASE = str(Path(__file__).parent.parent.parent.parent)
+
+
+def load_config(config_file=f"{BASE}/config.yaml"):
+    with open(config_file, mode="r") as file:
+        config = yaml.full_load(config_file)
+    return config["cybergear"], config["servo"]
+
+def calc_ratio(command: int, offset: int, min: int = -128, max: int = 128):
+    if command >= offset:
+        return (command - offset) / (max - offset)
+    elif command < offset:
+        return (command - offset) / abs(min - offset)
+
+def calc_cyber(command, mechanum, offset, max_speed):
+    # serial dataの上から4つがjoy stickの右左の順番と思って記載
+    target_x = max_speed * calc_ratio(command=command[0], offset=offset[0])
+    target_y = max_speed * calc_ratio(command=command[1], offset=offset[1])
+    target_w = max_speed * calc_ratio(command=command[2], offset=offset[2])
+    tr =   target_x + target_y + (mechanum[0] + mechanum[1])/mechanum[2] * target_w
+    tl = - target_x + target_y + (mechanum[0] + mechanum[1])/mechanum[2] * target_w
+    bl = - target_x - target_y + (mechanum[0] + mechanum[1])/mechanum[2] * target_w
+    br =   target_x - target_y + (mechanum[0] + mechanum[1])/mechanum[2] * target_w
+    return [tr, tl, bl, br]
 
 
 class PublisherCore(Node):
@@ -14,11 +41,10 @@ class PublisherCore(Node):
         self.topic_name = topic_name
         self.get_logger().info(f'Publishing serial input to {topic_name} for M5')
         
-        self.cybergear_data = list(np.zeros(4))
-        self.servo_data = list(np.zeros(4))
-
         self.readSer = serial.Serial(port=port, baudrate=baudrate, timeout=3)
         self.timer = self.create_timer(delay, self.publish_serial)
+
+        self.cybergear, self.servo = load_config()
 
     def publish_serial(self):
         msg = Float32MultiArray()
@@ -28,8 +54,14 @@ class PublisherCore(Node):
             line = [float.fromhex(f"0x{x}") for x in line.split(",")]
         except Exception as e:
             self.get_logger().error(f'データ読み取りエラー: {e}')
-            
-        msg.data = line
+
+        cybergear_command = line[:4]
+        servo_command = line[4:]
+        cybergear_data = calc_cyber(command=cybergear_command, 
+                                    mechanum=self.cybergear["mechanum"], 
+                                    offset=self.cybergear["offset"], 
+                                    max_speed=self.cybergear["speed"])
+        msg.data = cybergear_data.append(servo_command)
         self.publisher.publish(msg)
         self.get_logger().info(f'Sent to M5: {msg}')
 
