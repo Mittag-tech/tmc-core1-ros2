@@ -62,4 +62,5 @@ ENTRYPOINT ["/setup_ros2_humble.sh"]
 # install python library
 RUN pip install \
     pynput \
-    lark
+    lark \
+    serial

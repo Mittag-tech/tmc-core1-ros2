@@ -2,46 +2,40 @@
 import rclpy
 from rclpy.node import Node
 from std_msgs.msg import Float32MultiArray
-from pynput import keyboard
 import sys
+import serial
+import numpy as np
+
 
 class PublisherCore(Node):
-    def __init__(self, topic_name):
+    def __init__(self, topic_name, port = '/dev/ttyACM0', baudrate=115200, delay=0.01):
         super().__init__('publisher_core')
         self.publisher = self.create_publisher(Float32MultiArray, topic_name, 10)
-        
-        # キーボードリスナーの設定
-        self.listener = keyboard.Listener(on_press=self.on_press)
-        self.listener.start()
-        
         self.topic_name = topic_name
-        self.get_logger().info(f'Publishing keyboard input to {topic_name} for M5')
-
-    def on_press(self, key):
-        msg = Float32MultiArray()
+        self.get_logger().info(f'Publishing serial input to {topic_name} for M5')
         
-        try:
-            # 通常のキーの場合
-            key_char = key.char
-            msg.data = [0.0, 0.0]
-        except AttributeError:
-            # 特殊キー（Shift、Ctrl等）の場合
-            special_keys = {
-                'Key.up': 1,
-                'Key.down': 2,
-                'Key.left': 3,
-                'Key.right': 4,
-                'Key.space': 32,
-                'Key.enter': 13
-            }
-            msg.data = [float(special_keys.get(str(key), 0)), 1.0]
+        self.cybergear_data = list(np.zeros(4))
+        self.servo_data = list(np.zeros(4))
 
+        self.readSer = serial.Serial(port=port, baudrate=baudrate, timeout=3)
+        self.timer = self.create_timer(delay, self.publish_serial)
+
+    def publish_serial(self):
+        msg = Float32MultiArray()
+        try:
+            line = self.readSer.readline()
+            line = line.strip().decode("utf-8")
+            line = [float.fromhex(f"0x{x}") for x in line.split(",")]
+        except Exception as e:
+            self.get_logger().error(f'データ読み取りエラー: {e}')
+            
+        msg.data = line
         self.publisher.publish(msg)
         self.get_logger().info(f'Sent to M5: {msg}')
-        
-        # ESCキーで終了
-        if key == keyboard.Key.esc:
-            return False
+
+    def close(self):
+        self.readSer.close()
+
 
 def main(args=None):
     rclpy.init(args=args)
@@ -58,6 +52,7 @@ def main(args=None):
     finally:
         node.listener.stop()
         node.destroy_node()
+        node.close()
         rclpy.shutdown()
 
 if __name__ == '__main__':
