@@ -61,3 +61,7 @@ src/uros/
 # micro-ROS dir
 uros/*
 !uros/.gitignore
+
+# debug/ test
+test*
+debug*

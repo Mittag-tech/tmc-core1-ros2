@@ -20,7 +20,7 @@ DOCKER_OPTS := \
 				--privileged \
 				--ipc=host \
 				--network=host \
-				--device /dev/ttyACM_m5stack:/dev/ttyACM_m5stack
+				--device /dev:/dev
 
 docker-build:
 	docker build \

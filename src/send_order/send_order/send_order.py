@@ -4,16 +4,15 @@ from rclpy.node import Node
 from std_msgs.msg import Float32MultiArray
 import sys
 import serial
-import numpy as np
 import yaml
 from pathlib import Path
 
-BASE = str(Path(__file__).parent.parent.parent.parent)
+BASE = str(Path(__file__).parent.parent.parent.parent.parent.parent.parent)
 
 
-def load_config(config_file=f"{BASE}/config.yaml"):
+def load_config(config_file=f"{BASE}/src/config.yaml"):
     with open(config_file, mode="r") as file:
-        config = yaml.full_load(config_file)
+        config = yaml.safe_load(file)
     return config["cybergear"], config["servo"]
 
 def calc_ratio(command: int, offset: int, min: int = -128, max: int = 128):
@@ -35,7 +34,7 @@ def calc_cyber(command, mechanum, offset, max_speed):
 
 
 class PublisherCore(Node):
-    def __init__(self, topic_name, port = '/dev/ttyACM0', baudrate=115200, delay=0.01):
+    def __init__(self, topic_name, port = '/dev/ttyAMA10', baudrate=115200, delay=0.2):
         super().__init__('publisher_core')
         self.publisher = self.create_publisher(Float32MultiArray, topic_name, 10)
         self.topic_name = topic_name
@@ -55,8 +54,8 @@ class PublisherCore(Node):
         except Exception as e:
             self.get_logger().error(f'データ読み取りエラー: {e}')
 
-        cybergear_command = line[:4]
-        servo_command = line[4:]
+        cybergear_command = line[4:8]
+        servo_command = line[8:]
         cybergear_data = calc_cyber(command=cybergear_command, 
                                     mechanum=self.cybergear["mechanum"], 
                                     offset=self.cybergear["offset"], 
