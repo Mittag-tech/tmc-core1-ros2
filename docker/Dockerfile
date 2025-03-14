@@ -2,6 +2,7 @@
 FROM ubuntu:22.04
 
 ENV DEBIAN_FRONTEND=noninteractive
+SHELL ["/bin/bash", "-c"]
 
 # Install dependencies
 RUN apt-get update && apt-get install -y \
@@ -46,13 +47,25 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/*
 RUN pip install opencv-contrib-python==4.10.0.84 empy==3.3.4
 
-# Initialize rosdep
-RUN rosdep init && rosdep update
+RUN mkdir -p /home/root/uros_ws/src
+WORKDIR /home/root/uros_ws
+RUN cd src && \
+    git clone -b humble https://github.com/micro-ROS/micro_ros_setup.git
 
 # Set environment variables
 ENV ROS_DISTRO=humble
 ENV ROS_ROOT=/opt/ros/$ROS_DISTRO
-RUN sh -c 'echo "source /opt/ros/humble/setup.bash" >> ~/.bashrc'
+RUN echo "source /opt/ros/humble/setup.bash" >> /root/.bashrc
+
+# Initialize rosdep
+RUN source /opt/ros/humble/setup.bash&& \
+    rosdep init && \
+    rosdep update && \
+    rosdep install --from-paths . -y --ignore-src --rosdistro humble && \
+    colcon build && \
+    source ./install/setup.bash && \
+    ros2 run micro_ros_setup create_agent_ws.sh && \
+    ros2 run micro_ros_setup build_agent.sh
 
 # Set up entrypoint
 COPY docker/setup_ros2_humble.sh /
