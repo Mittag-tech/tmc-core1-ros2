@@ -56,17 +56,19 @@ def bool_toggle(command, mask):
     else:
         return False
     
-def create_servo_data(command, servo, mask):
+def create_servo_data(command, servo, mask, angle_flag):
     direction = bool_toggle(command=command, mask=mask[DIRECTION])
     roller = bool_toggle(command=command, mask=mask[ROLLER])
     shoot = bool_toggle(command=command, mask=mask[SHOOT])
     reset = bool_toggle(command=command, mask=mask[RESET])
     if not roller:
         roller_pwm = servo["roller_pwm"]
-        if shoot:
+        if shoot and angle_flag:
             shoot_angle = servo["angle"]
+            angle_flag = False
         else:
             shoot_angle = 0
+            angle_flag = True
     else:
         roller_pwm = 1010
         shoot_angle = 0
@@ -79,7 +81,7 @@ def create_servo_data(command, servo, mask):
     else:
         servo_data = [0, 0, shoot_angle, roller_pwm, servo_reset]
         
-    return [float(x) for x in servo_data]
+    return [float(x) for x in servo_data], angle_flag
 
 
 class PublisherCore(Node):
@@ -93,6 +95,7 @@ class PublisherCore(Node):
         self.timer = self.create_timer(delay, self.publish_serial)
 
         self.cybergear, self.servo = load_config()
+        self.angle_flag = True
 
     def publish_serial(self):
         msg = Float32MultiArray()
@@ -113,9 +116,10 @@ class PublisherCore(Node):
                                     rotate=self.cybergear["rotate"],
                                     joystick=self.cybergear["joystick"],
                                     deadzone=self.cybergear["deadzone"])
-        servo_data = create_servo_data(command=servo_command,
-                                       servo=self.servo,
-                                       mask=self.servo["mask"])
+        servo_data, self.angle_flag= create_servo_data(command=servo_command,
+                                                     servo=self.servo,
+                                                     mask=self.servo["mask"],
+                                                     angle_flag=self.angle_flag)
         msg.data = cybergear_data + servo_data
         self.publisher.publish(msg)
         self.get_logger().info(f'Sent to M5: {msg}')
