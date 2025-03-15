@@ -62,7 +62,7 @@ def create_servo_data(command, servo, mask, angle_flag):
     shoot = bool_toggle(command=command, mask=mask[SHOOT])
     reset = bool_toggle(command=command, mask=mask[RESET])
     if not roller:
-        roller_pwm = servo["roller_pwm"]
+        roller_pwm = servo["roller_pwm"]["max"]
         if shoot and angle_flag:
             shoot_angle = servo["angle"]
             angle_flag = False
@@ -70,7 +70,7 @@ def create_servo_data(command, servo, mask, angle_flag):
             shoot_angle = 0
             angle_flag = True
     else:
-        roller_pwm = 1010
+        roller_pwm = servo["roller_pwm"]["min"]
         shoot_angle = 0
     if reset:
         servo_reset = 1
