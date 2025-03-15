@@ -1,15 +1,26 @@
 cybergear:
-  speed: 1.0
+  speed: 15.0
+  rotate: 0.3
+  deadzone: 0.5
   mechanum: 
     - 0.306 # * 2 = mecha_x size
     - 0.270 # * 2 = mecha_y size
     - 0.0635 # tire_r
   offset: 
-    - 0 # joystick_x offset
-    - 0 # joystick_y offset
-    - 0 # joystick_w offset
-  joy_max: 128
-  joy_min: -128
+    - 128 # joystick_x offset
+    - 128 # joystick_y offset
+    - 129 # joystick_w offset
+  joystick: 
+    max: 255
+    min: 0
 
 servo:
   angle: 40
+  roller_pwm: 1060
+  mask:
+    B1: 1
+    B2: 2
+    B3: 4
+    B4: 8
+    T3: 16
+    T4: 32
