@@ -10,6 +10,7 @@ from pathlib import Path
 
 BASE = str(Path(__file__).parent.parent.parent.parent)
 SHOOT = "B1"
+RESET = "B2"
 DIRECTION = "T4"
 ROLLER = "T3"
 
@@ -59,18 +60,25 @@ def create_servo_data(command, servo, mask):
     direction = bool_toggle(command=command, mask=mask[DIRECTION])
     roller = bool_toggle(command=command, mask=mask[ROLLER])
     shoot = bool_toggle(command=command, mask=mask[SHOOT])
+    reset = bool_toggle(command=command, mask=mask[RESET])
     if not roller:
         roller_pwm = servo["roller_pwm"]
+        if shoot:
+            shoot_angle = servo["angle"]
+        else:
+            shoot_angle = 0
     else:
-        roller_pwm = 0
-    if shoot:
-        shoot_angle = servo["angle"]
-    else:
+        roller_pwm = 1010
         shoot_angle = 0
-    if not direction:
-        servo_data = [shoot_angle, roller_pwm, 0, 0]
+    if reset:
+        servo_reset = 1
     else:
-        servo_data = [0, 0, shoot_angle, roller_pwm]
+        servo_reset = 0
+    if not direction:
+        servo_data = [shoot_angle, roller_pwm, 0, 0, servo_reset]
+    else:
+        servo_data = [0, 0, shoot_angle, roller_pwm, servo_reset]
+        
     return [float(x) for x in servo_data]
 
 
@@ -97,7 +105,6 @@ class PublisherCore(Node):
             self.get_logger().error(f'データ読み取りエラー: {e}')
 
         cybergear_command = line[:4]
-        print(cybergear_command)
         servo_command = line[4]
         cybergear_data = calc_cyber(command=cybergear_command, 
                                     mechanum=self.cybergear["mechanum"], 
