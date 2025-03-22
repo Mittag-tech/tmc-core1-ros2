@@ -59,9 +59,12 @@ src/uros/
 .vscode
 
 # micro-ROS dir
-uros/*
+uros_ws/src/*
 !uros/.gitignore
 
 # debug/ test
 test*
 debug*
+
+#cache
+*/ros2.repos

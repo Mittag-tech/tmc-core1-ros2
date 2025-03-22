@@ -47,25 +47,18 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/*
 RUN pip install opencv-contrib-python==4.10.0.84 empy==3.3.4
 
-RUN mkdir -p /home/root/uros_ws/src
-WORKDIR /home/root/uros_ws
-RUN cd src && \
-    git clone -b humble https://github.com/micro-ROS/micro_ros_setup.git
-
 # Set environment variables
 ENV ROS_DISTRO=humble
 ENV ROS_ROOT=/opt/ros/$ROS_DISTRO
 RUN echo "source /opt/ros/humble/setup.bash" >> /root/.bashrc
 
 # Initialize rosdep
+RUN mkdir -p /home/root/ros2_ws
+WORKDIR /home/root/ros2_ws
 RUN source /opt/ros/humble/setup.bash&& \
     rosdep init && \
     rosdep update && \
-    rosdep install --from-paths . -y --ignore-src --rosdistro humble && \
-    colcon build && \
-    source ./install/setup.bash && \
-    ros2 run micro_ros_setup create_agent_ws.sh && \
-    ros2 run micro_ros_setup build_agent.sh
+    rosdep install --from-paths . -y --ignore-src --rosdistro humble
 
 # Set up entrypoint
 COPY docker/setup_ros2_humble.sh /

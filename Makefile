@@ -3,6 +3,7 @@ VERSION ?= latest
 
 USER ?= root
 WORKSPACE ?= /home/root/ros2_ws
+ROOT ?= /home/root
 DOCKER_IMAGE ?= $(PROJECT):$(VERSION)
 
 SHMSIZE ?= 444G
@@ -15,7 +16,8 @@ DOCKER_OPTS := \
 				-e ~/.cache:/home/root/.cache \
 				-v /tmp/.X11-unix/X0:/tmp/.X11-unix/X0 \
 				-v /var/run/docker.sock:/var/run/docker.sock \
-				-v ${PWD}/src:${WORKSPACE}/src \
+				-v ${PWD}/main_ws:${WORKSPACE} \
+				-v ${PWD}/uros_ws:${ROOT}/uros_ws \
 				-w ${WORKSPACE} \
 				--privileged \
 				--ipc=host \
