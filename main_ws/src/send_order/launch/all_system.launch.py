@@ -19,9 +19,16 @@ def generate_launch_description():
         default_value="src/config.yaml"
     )
     front_device_arg = DeclareLaunchArgument(
-        'front_device', default_value=TextSubstitution(text='/dev/video0'),
+        'front_device', default_value='/dev/front_camera',
         description='Device path for camera 1'
     )
+    rear_device_arg = DeclareLaunchArgument(
+        'rear_device', default_value='/dev/rear_camera',
+        description='Device path for camera 2'
+    )
+    
+    # カメラネームスペースの設定
+    camera_namespaces = ['front', 'rear']
 
     return LaunchDescription(
         [
@@ -29,7 +36,8 @@ def generate_launch_description():
             topic_name,
             config,
             front_device_arg,
-            Node(namespace="usb_camera",
+            rear_device_arg,
+            Node(namespace="front",
                  package="usb_cam",
                  executable="usb_cam_node_exe",
                  parameters=[{
@@ -40,11 +48,27 @@ def generate_launch_description():
                     'image_height': 480,
                     'pixel_format': 'yuyv'
                }]
-                 ),
+            ),
+            Node(
+               package='usb_cam',
+               executable='usb_cam_node_exe',
+               namespace='rear',
+               parameters=[{
+                    'video_device': LaunchConfiguration('rear_device'),
+                    'frame_id': 'rear_frame',
+                    'camera_name': 'rear',
+                    'image_width': 640,
+                    'image_height': 480,
+                    'pixel_format': 'yuyv'
+               }]
+            ),
             Node(namespace="camera",
                  package="front_camera",
                  executable="front_camera_node",
-                 ),
+                 parameters=[{
+                    'camera_ns': camera_namespaces
+                }],
+            ),
             Node(namespace="micro_ros",
                  package="micro_ros_agent",
                  executable="micro_ros_agent",

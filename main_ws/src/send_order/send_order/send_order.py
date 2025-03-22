@@ -114,24 +114,27 @@ class PublisherCore(Node):
             line = [x for x in line.split(",")][3:]
             line = [float.fromhex(f"0x{x}") for x in line]
             if line:
-                self.get_logger().info(f"connection fine, {line}")
                 GPIO.output(OUTPUT_PIN, GPIO.HIGH)
             else:
                 self.get_logger().info("connection failed")
                 GPIO.output(OUTPUT_PIN, GPIO.LOW)    
             cybergear_command = line[:4]
             servo_command = line[4]
+            direction = bool_toggle(command=servo_command,
+                                    mask=self.servo["mask"][DIRECTION])
             cybergear_data = calc_cyber(command=cybergear_command, 
                                         mechanum=self.cybergear["mechanum"], 
                                         offset=self.cybergear["offset"], 
                                         max_speed=self.cybergear["speed"],
                                         rotate=self.cybergear["rotate"],
                                         joystick=self.cybergear["joystick"],
-                                        deadzone=self.cybergear["deadzone"])
+                                        deadzone=self.cybergear["deadzone"],
+                                        direction=direction)
             servo_data, self.angle_flag= create_servo_data(command=servo_command,
                                                         servo=self.servo,
                                                         mask=self.servo["mask"],
-                                                        angle_flag=self.angle_flag)
+                                                        angle_flag=self.angle_flag,
+                                                        direction=direction)
             msg.data = cybergear_data + servo_data
             self.publisher.publish(msg)
             self.get_logger().info(f'Sent to M5: {msg}')
