@@ -92,7 +92,7 @@ def create_servo_data(command, servo, mask, angle_flag):
 
 
 class PublisherCore(Node):
-    def __init__(self, topic_name, port = '/dev/ttyAMA10', baudrate=115200, delay=0.01):
+    def __init__(self, topic_name, config, port = '/dev/ttyAMA10', baudrate=115200, delay=0.01):
         super().__init__('publisher_core')
         self.publisher = self.create_publisher(Float32MultiArray, topic_name, 10)
         self.topic_name = topic_name
@@ -101,7 +101,7 @@ class PublisherCore(Node):
         self.readSer = serial.Serial(port=port, baudrate=baudrate, timeout=1)
         self.timer = self.create_timer(delay, self.publish_serial)
 
-        self.cybergear, self.servo = load_config()
+        self.cybergear, self.servo = load_config(config_file=config)
         self.angle_flag = True
 
     def publish_serial(self):
@@ -147,8 +147,9 @@ def main(args=None):
     
     # トピック名を引数から受け取る（デフォルトは/micro_ros_arduino_subscribe）
     topic_name = '/micro_ros_arduino_subscriber' if len(sys.argv) < 2 else sys.argv[1]
+    config = "src/config.yaml" if len(sys.argv) < 2 else sys.argv[2]
     
-    node = PublisherCore(topic_name)
+    node = PublisherCore(topic_name, config=config)
     
     try:
         rclpy.spin(node)
