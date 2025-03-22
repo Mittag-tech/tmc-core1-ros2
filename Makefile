@@ -22,7 +22,7 @@ DOCKER_OPTS := \
 				--privileged \
 				--ipc=host \
 				--network=host \
-				--device /dev:/dev
+				-v /dev:/dev
 
 docker-build:
 	docker build \

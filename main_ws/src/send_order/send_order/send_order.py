@@ -8,11 +8,18 @@ import yaml
 import math
 from pathlib import Path
 
+import RPi.GPIO as GPIO
+
 BASE = str(Path(__file__).parent.parent.parent.parent)
 SHOOT = "B1"
 RESET = "B2"
 DIRECTION = "T4"
 ROLLER = "T3"
+
+# GPIO setting
+GPIO.setmode(GPIO.BCM)
+OUTPUT_PIN = 22
+GPIO.setup(OUTPUT_PIN, GPIO.OUT)
 
 
 def load_config(config_file=f"{BASE}/src/config.yaml"):
@@ -91,7 +98,7 @@ class PublisherCore(Node):
         self.topic_name = topic_name
         self.get_logger().info(f'Publishing serial input to {topic_name} for M5')
         
-        self.readSer = serial.Serial(port=port, baudrate=baudrate)
+        self.readSer = serial.Serial(port=port, baudrate=baudrate, timeout=1)
         self.timer = self.create_timer(delay, self.publish_serial)
 
         self.cybergear, self.servo = load_config()
@@ -104,25 +111,32 @@ class PublisherCore(Node):
             line = line.strip().decode("utf-8")
             line = [x for x in line.split(",")][3:]
             line = [float.fromhex(f"0x{x}") for x in line]
+            if line:
+                self.get_logger().info(f"connection fine, {line}")
+                GPIO.output(OUTPUT_PIN, GPIO.HIGH)
+            else:
+                self.get_logger().info("connection failed")
+                GPIO.output(OUTPUT_PIN, GPIO.LOW)    
+            cybergear_command = line[:4]
+            servo_command = line[4]
+            cybergear_data = calc_cyber(command=cybergear_command, 
+                                        mechanum=self.cybergear["mechanum"], 
+                                        offset=self.cybergear["offset"], 
+                                        max_speed=self.cybergear["speed"],
+                                        rotate=self.cybergear["rotate"],
+                                        joystick=self.cybergear["joystick"],
+                                        deadzone=self.cybergear["deadzone"])
+            servo_data, self.angle_flag= create_servo_data(command=servo_command,
+                                                        servo=self.servo,
+                                                        mask=self.servo["mask"],
+                                                        angle_flag=self.angle_flag)
+            msg.data = cybergear_data + servo_data
+            self.publisher.publish(msg)
+            self.get_logger().info(f'Sent to M5: {msg}')
         except Exception as e:
             self.get_logger().error(f'データ読み取りエラー: {e}')
+            GPIO.output(OUTPUT_PIN, GPIO.LOW)
 
-        cybergear_command = line[:4]
-        servo_command = line[4]
-        cybergear_data = calc_cyber(command=cybergear_command, 
-                                    mechanum=self.cybergear["mechanum"], 
-                                    offset=self.cybergear["offset"], 
-                                    max_speed=self.cybergear["speed"],
-                                    rotate=self.cybergear["rotate"],
-                                    joystick=self.cybergear["joystick"],
-                                    deadzone=self.cybergear["deadzone"])
-        servo_data, self.angle_flag= create_servo_data(command=servo_command,
-                                                     servo=self.servo,
-                                                     mask=self.servo["mask"],
-                                                     angle_flag=self.angle_flag)
-        msg.data = cybergear_data + servo_data
-        self.publisher.publish(msg)
-        self.get_logger().info(f'Sent to M5: {msg}')
 
     def close(self):
         self.readSer.close()
