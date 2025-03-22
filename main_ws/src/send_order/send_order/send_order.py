@@ -39,7 +39,7 @@ def set_deadzone(data, deadzone):
     else:
         return data
 
-def calc_cyber(command, mechanum, offset, max_speed, rotate, joystick, deadzone):
+def calc_cyber(command, mechanum, offset, max_speed, rotate, joystick, deadzone, direction):
     joy_max = joystick["max"]
     joy_min = joystick["min"]
     reshape_x = abs(joy_max - command[1])
@@ -50,7 +50,10 @@ def calc_cyber(command, mechanum, offset, max_speed, rotate, joystick, deadzone)
     tl = - target_x + target_y + (mechanum[0] + mechanum[1])/mechanum[2] * target_w
     bl = - target_x - target_y + (mechanum[0] + mechanum[1])/mechanum[2] * target_w
     br =   target_x - target_y + (mechanum[0] + mechanum[1])/mechanum[2] * target_w
-    data = [tr, tl, bl, br]
+    if not direction:
+        data = [tr, tl, bl, br]
+    else:
+        data = [-tr, -tl, -bl, -br]
     cybergear_data = [set_deadzone(x, deadzone=deadzone) for x in data]
     return cybergear_data
 
@@ -63,8 +66,7 @@ def bool_toggle(command, mask):
     else:
         return False
     
-def create_servo_data(command, servo, mask, angle_flag):
-    direction = bool_toggle(command=command, mask=mask[DIRECTION])
+def create_servo_data(command, servo, mask, angle_flag, direction):
     roller = bool_toggle(command=command, mask=mask[ROLLER])
     shoot = bool_toggle(command=command, mask=mask[SHOOT])
     reset = bool_toggle(command=command, mask=mask[RESET])
