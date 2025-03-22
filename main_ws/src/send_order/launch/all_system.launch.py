@@ -1,6 +1,6 @@
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument, Shutdown
-from launch.substitutions import LaunchConfiguration
+from launch.substitutions import LaunchConfiguration, TextSubstitution
 from launch_ros.actions import Node
 
 def generate_launch_description():
@@ -18,15 +18,28 @@ def generate_launch_description():
         "config",
         default_value="src/config.yaml"
     )
+    front_device_arg = DeclareLaunchArgument(
+        'front_device', default_value=TextSubstitution(text='/dev/video0'),
+        description='Device path for camera 1'
+    )
 
     return LaunchDescription(
         [
             port,
             topic_name,
             config,
+            front_device_arg,
             Node(namespace="usb_camera",
                  package="usb_cam",
                  executable="usb_cam_node_exe",
+                 parameters=[{
+                    'video_device': LaunchConfiguration('front_device'),
+                    'frame_id': 'front_frame',
+                    'camera_name': 'front',
+                    'image_width': 640,
+                    'image_height': 480,
+                    'pixel_format': 'yuyv'
+               }]
                  ),
             Node(namespace="camera",
                  package="front_camera",
