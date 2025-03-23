@@ -66,7 +66,7 @@ def bool_toggle(command, mask):
     else:
         return False
     
-def create_servo_data(command, servo, mask, angle_flag, direction, reset_state):
+def create_servo_data(command, servo, mask, angle_cnt, direction, reset_state):
     roller = bool_toggle(command=command, mask=mask[ROLLER])
     shoot = bool_toggle(command=command, mask=mask[SHOOT])
     reset = bool_toggle(command=command, mask=mask[RESET])
@@ -100,23 +100,27 @@ def create_servo_data(command, servo, mask, angle_flag, direction, reset_state):
     
     # shoot_angleの処理（通常通り）
     if not roller:
-        if shoot and angle_flag:
-            shoot_angle = servo["angle"]
-            angle_flag = False
+        if shoot and angle_cnt < servo["angle"]["interval"]:
+            shoot_angle = servo["angle"]["shoot_angle"]
+            angle_cnt += 1
         else:
             shoot_angle = 0
-            angle_flag = True
+            if angle_cnt > 2 * servo["angle"]["interval"]
+                angle_cnt = 0
     else:
         shoot_angle = 0
 
     servo_reset = 1 if reset else 0
 
-    if not direction:
-        servo_data = [shoot_angle, roller_pwm, 0, 0, servo_reset]
+    if roller_pwm == servo["roller_pwm"]["max"]:
+        servo_data = [shoot_angle, roller_pwm, 0, roller_pwm, servo_reset]
     else:
-        servo_data = [0, 0, shoot_angle, roller_pwm, servo_reset]
+        if not direction:
+            servo_data = [shoot_angle, roller_pwm, 0, 0, servo_reset]
+        else:
+            servo_data = [0, 0, shoot_angle, roller_pwm, servo_reset]
         
-    return [float(x) for x in servo_data], angle_flag, reset_state
+    return [float(x) for x in servo_data], angle_cnt, reset_state
 
 
 class PublisherCore(Node):
@@ -129,7 +133,7 @@ class PublisherCore(Node):
         self.timer = self.create_timer(delay, self.publish_serial)
 
         self.cybergear, self.servo = load_config(config_file=config)
-        self.angle_flag = True
+        self.angle_cnt = 0
 
         # RESETシーケンスの状態管理用変数
         self.reset_state = {"active": False, "start_time": None}
@@ -162,11 +166,11 @@ class PublisherCore(Node):
                 direction=direction
             )
             # 変更箇所：reset_stateを渡す
-            servo_data, self.angle_flag, self.reset_state = create_servo_data(
+            servo_data, self.angle_cnt, self.reset_state = create_servo_data(
                 command=servo_command,
                 servo=self.servo,
                 mask=self.servo["mask"],
-                angle_flag=self.angle_flag,
+                angle_cnt=self.angle_cnt,
                 direction=direction,
                 reset_state=self.reset_state
             )
