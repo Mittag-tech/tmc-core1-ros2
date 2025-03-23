@@ -178,6 +178,7 @@ class PublisherCore(Node):
                 direction=direction,
                 reset_state=self.reset_state
             )
+            print(servo_data)
             msg.data = cybergear_data + servo_data
             self.publisher.publish(msg)
             self.get_logger().info(f'Sent to M5: {msg}')
@@ -187,7 +188,6 @@ class PublisherCore(Node):
 
     def close(self):
         self.readSer.close()
-
 
 def main(args=None):
     rclpy.init(args=args)
