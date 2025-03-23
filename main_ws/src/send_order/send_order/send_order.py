@@ -79,16 +79,16 @@ def create_servo_data(command, servo, mask, angle_cnt, direction, reset_state):
     # RESETシーケンスがアクティブな場合、ROLLERのPWM出力を上書きする
     if reset_state["active"]:
         elapsed = time.time() - reset_state["start_time"]
-        if elapsed < 2:
+        if elapsed <= 2.5:
             roller_pwm = servo["roller_pwm"]["max"]
-        elif elapsed < 4:
+        elif elapsed <= 5:
             roller_pwm = servo["roller_pwm"]["min"]
         else:
             # 4秒経過したらRESETシーケンス終了、通常処理に戻す
             reset_state["active"] = False
             # 以下はRESETシーケンス終了後の通常処理のための設定
             if not roller:
-                roller_pwm = servo["roller_pwm"]["max"]
+                roller_pwm = servo["roller_pwm"]["motor_on"]
             else:
                 roller_pwm = servo["roller_pwm"]["min"]
     else:
@@ -112,6 +112,7 @@ def create_servo_data(command, servo, mask, angle_cnt, direction, reset_state):
                 angle_cnt = 0
     else:
         shoot_angle = 0
+        angle_cnt = 0
 
     servo_reset = 1 if reset else 0
 
