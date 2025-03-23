@@ -6,6 +6,7 @@ import sys
 import serial
 import yaml
 import math
+import time
 from pathlib import Path
 
 import RPi.GPIO as GPIO
@@ -65,12 +66,40 @@ def bool_toggle(command, mask):
     else:
         return False
     
-def create_servo_data(command, servo, mask, angle_flag, direction):
+def create_servo_data(command, servo, mask, angle_flag, direction, reset_state):
     roller = bool_toggle(command=command, mask=mask[ROLLER])
     shoot = bool_toggle(command=command, mask=mask[SHOOT])
     reset = bool_toggle(command=command, mask=mask[RESET])
+    
+    # RESETボタンが押されたら、RESETシーケンスを開始
+    if reset and not reset_state["active"]:
+        reset_state["active"] = True
+        reset_state["start_time"] = time.time()
+    
+    # RESETシーケンスがアクティブな場合、ROLLERのPWM出力を上書きする
+    if reset_state["active"]:
+        elapsed = time.time() - reset_state["start_time"]
+        if elapsed < 2:
+            roller_pwm = servo["roller_pwm"]["max"]
+        elif elapsed < 4:
+            roller_pwm = servo["roller_pwm"]["min"]
+        else:
+            # 4秒経過したらRESETシーケンス終了、通常処理に戻す
+            reset_state["active"] = False
+            # 以下はRESETシーケンス終了後の通常処理のための設定
+            if not roller:
+                roller_pwm = servo["roller_pwm"]["max"]
+            else:
+                roller_pwm = servo["roller_pwm"]["min"]
+    else:
+        # 通常のROLLLER処理
+        if not roller:
+            roller_pwm = servo["roller_pwm"]["motor_on"]
+        else:
+            roller_pwm = servo["roller_pwm"]["min"]
+    
+    # shoot_angleの処理（通常通り）
     if not roller:
-        roller_pwm = servo["roller_pwm"]["max"]
         if shoot and angle_flag:
             shoot_angle = servo["angle"]
             angle_flag = False
@@ -78,25 +107,22 @@ def create_servo_data(command, servo, mask, angle_flag, direction):
             shoot_angle = 0
             angle_flag = True
     else:
-        roller_pwm = servo["roller_pwm"]["min"]
         shoot_angle = 0
-    if reset:
-        servo_reset = 1
-    else:
-        servo_reset = 0
+
+    servo_reset = 1 if reset else 0
+
     if not direction:
         servo_data = [shoot_angle, roller_pwm, 0, 0, servo_reset]
     else:
         servo_data = [0, 0, shoot_angle, roller_pwm, servo_reset]
         
-    return [float(x) for x in servo_data], angle_flag
+    return [float(x) for x in servo_data], angle_flag, reset_state
 
 
 class PublisherCore(Node):
-    def __init__(self, topic_name, config, port = '/dev/ttyAMA10', baudrate=115200, delay=0.01):
+    def __init__(self, topic_name, config, port='/dev/ttyAMA10', baudrate=115200, delay=0.01):
         super().__init__('publisher_core')
         self.publisher = self.create_publisher(Float32MultiArray, topic_name, 10)
-        self.topic_name = topic_name
         self.get_logger().info(f'Publishing serial input to {topic_name} for M5')
         
         self.readSer = serial.Serial(port=port, baudrate=baudrate, timeout=1)
@@ -105,9 +131,13 @@ class PublisherCore(Node):
         self.cybergear, self.servo = load_config(config_file=config)
         self.angle_flag = True
 
+        # RESETシーケンスの状態管理用変数
+        self.reset_state = {"active": False, "start_time": None}
+
     def publish_serial(self):
         msg = Float32MultiArray()
         try:
+            # シリアルデータの読み込みとパース処理はそのまま
             line = self.readSer.readline()
             line = line.strip().decode("utf-8")
             line = [x for x in line.split(",")][3:]
@@ -121,26 +151,31 @@ class PublisherCore(Node):
             servo_command = line[4]
             direction = bool_toggle(command=servo_command,
                                     mask=self.servo["mask"][DIRECTION])
-            cybergear_data = calc_cyber(command=cybergear_command, 
-                                        mechanum=self.cybergear["mechanum"], 
-                                        offset=self.cybergear["offset"], 
-                                        max_speed=self.cybergear["speed"],
-                                        rotate=self.cybergear["rotate"],
-                                        joystick=self.cybergear["joystick"],
-                                        deadzone=self.cybergear["deadzone"],
-                                        direction=direction)
-            servo_data, self.angle_flag= create_servo_data(command=servo_command,
-                                                        servo=self.servo,
-                                                        mask=self.servo["mask"],
-                                                        angle_flag=self.angle_flag,
-                                                        direction=direction)
+            cybergear_data = calc_cyber(
+                command=cybergear_command, 
+                mechanum=self.cybergear["mechanum"], 
+                offset=self.cybergear["offset"], 
+                max_speed=self.cybergear["speed"],
+                rotate=self.cybergear["rotate"],
+                joystick=self.cybergear["joystick"],
+                deadzone=self.cybergear["deadzone"],
+                direction=direction
+            )
+            # 変更箇所：reset_stateを渡す
+            servo_data, self.angle_flag, self.reset_state = create_servo_data(
+                command=servo_command,
+                servo=self.servo,
+                mask=self.servo["mask"],
+                angle_flag=self.angle_flag,
+                direction=direction,
+                reset_state=self.reset_state
+            )
             msg.data = cybergear_data + servo_data
             self.publisher.publish(msg)
             self.get_logger().info(f'Sent to M5: {msg}')
         except Exception as e:
             self.get_logger().error(f'データ読み取りエラー: {e}')
             GPIO.output(OUTPUT_PIN, GPIO.LOW)
-
 
     def close(self):
         self.readSer.close()

@@ -17,8 +17,9 @@ cybergear:
 servo:
   angle: 40
   roller_pwm: 
-    max: 1060
-    min: 1010
+    max: 1600
+    min: 1000
+    motor_on: 1060
   mask:
     B1: 1
     B2: 2
