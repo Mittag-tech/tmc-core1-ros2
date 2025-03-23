@@ -44,15 +44,15 @@ def calc_cyber(command, mechanum, offset, max_speed, rotate, joystick, deadzone,
     joy_min = joystick["min"]
     target_x = max_speed * calc_ratio(command=command[1], offset=offset[1], min=joy_min, max=joy_max)
     target_y = max_speed * calc_ratio(command=command[0], offset=offset[0], min=joy_min, max=joy_max)
-    target_w = rotate * calc_ratio(command=command[3], offset=offset[2], min=joy_min, max=joy_max)
+    target_w = -rotate * calc_ratio(command=command[3], offset=offset[2], min=joy_min, max=joy_max)
+    if not direction:
+        target_x = -target_x
+        target_y = -target_y
     tr =   target_x + target_y + (mechanum[0] + mechanum[1])/mechanum[2] * target_w
     tl = - target_x + target_y + (mechanum[0] + mechanum[1])/mechanum[2] * target_w
     bl = - target_x - target_y + (mechanum[0] + mechanum[1])/mechanum[2] * target_w
     br =   target_x - target_y + (mechanum[0] + mechanum[1])/mechanum[2] * target_w
-    if direction:
-        data = [tr, tl, bl, br]
-    else:
-        data = [-tr, -tl, -bl, -br]
+    data = [tr, tl, bl, br]
     cybergear_data = [set_deadzone(x, deadzone=deadzone) for x in data]
     return cybergear_data
 
