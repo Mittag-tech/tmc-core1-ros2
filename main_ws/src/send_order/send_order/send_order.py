@@ -42,15 +42,14 @@ def set_deadzone(data, deadzone):
 def calc_cyber(command, mechanum, offset, max_speed, rotate, joystick, deadzone, direction):
     joy_max = joystick["max"]
     joy_min = joystick["min"]
-    reshape_x = abs(joy_max - command[1])
-    target_x = max_speed * calc_ratio(command=reshape_x, offset=offset[1], min=joy_min, max=joy_max)
+    target_x = max_speed * calc_ratio(command=command[1], offset=offset[1], min=joy_min, max=joy_max)
     target_y = max_speed * calc_ratio(command=command[0], offset=offset[0], min=joy_min, max=joy_max)
     target_w = rotate * calc_ratio(command=command[3], offset=offset[2], min=joy_min, max=joy_max)
     tr =   target_x + target_y + (mechanum[0] + mechanum[1])/mechanum[2] * target_w
     tl = - target_x + target_y + (mechanum[0] + mechanum[1])/mechanum[2] * target_w
     bl = - target_x - target_y + (mechanum[0] + mechanum[1])/mechanum[2] * target_w
     br =   target_x - target_y + (mechanum[0] + mechanum[1])/mechanum[2] * target_w
-    if not direction:
+    if direction:
         data = [tr, tl, bl, br]
     else:
         data = [-tr, -tl, -bl, -br]
