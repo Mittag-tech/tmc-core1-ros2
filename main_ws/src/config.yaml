@@ -1,6 +1,6 @@
 cybergear:
-  speed: 15.0
-  rotate: 0.3
+  speed: 7.0
+  rotate: 0.785
   deadzone: 0.5
   mechanum: 
     - 0.306 # * 2 = mecha_x size
@@ -15,7 +15,9 @@ cybergear:
     min: 0
 
 servo:
-  angle: 40
+  angle: 
+    shoot_angle: 40
+    interval: 5
   roller_pwm: 
     max: 1600
     min: 1000
