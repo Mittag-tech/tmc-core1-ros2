@@ -105,7 +105,10 @@ def create_servo_data(command, servo, mask, angle_cnt, direction, reset_state):
             angle_cnt += 1
         else:
             shoot_angle = 0
-            if angle_cnt > 2 * servo["angle"]["interval"]
+            if shoot:
+                angle_cnt += 1
+
+            if angle_cnt > 2 * servo["angle"]["interval"]:
                 angle_cnt = 0
     else:
         shoot_angle = 0
