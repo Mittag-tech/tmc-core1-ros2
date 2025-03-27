@@ -2,6 +2,7 @@
 import rclpy
 from rclpy.node import Node
 from std_msgs.msg import Float32MultiArray
+from std_msgs.msg import Bool
 import sys
 import serial
 import yaml
@@ -141,6 +142,8 @@ class PublisherCore(Node):
 
         # RESETシーケンスの状態管理用変数
         self.reset_state = {"active": False, "start_time": None}
+        # direction_active用のPublisher
+        self.direction_pub = self.create_publisher(Bool, '/direction_active', 10)
 
     def publish_serial(self):
         msg = Float32MultiArray()
@@ -159,6 +162,12 @@ class PublisherCore(Node):
             servo_command = line[4]
             direction = bool_toggle(command=servo_command,
                                     mask=self.servo["mask"][DIRECTION])
+            
+            # direction_activeトピックへのPublishを追加
+            direction_msg = Bool()
+            direction_msg.data = direction  # そのままdirectionのbool値を設定
+            self.direction_pub.publish(direction_msg)
+            
             cybergear_data = calc_cyber(
                 command=cybergear_command, 
                 mechanum=self.cybergear["mechanum"], 

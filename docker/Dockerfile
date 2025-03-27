@@ -72,3 +72,7 @@ RUN pip install \
     pyserial \
     rpi.gpio \
     rpi-lgpio
+
+# install camera library
+RUN pip install fastapi uvicorn aiohttp opencv-python-headless
+EXPOSE 8000
