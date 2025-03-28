@@ -69,6 +69,10 @@ def generate_launch_description():
                     'camera_ns': camera_namespaces
                 }],
             ),
+            Node(package='dual_webcam',
+                 executable='web_cam_node',
+                 output='screen',
+                 ),
             Node(namespace="micro_ros",
                  package="micro_ros_agent",
                  executable="micro_ros_agent",
