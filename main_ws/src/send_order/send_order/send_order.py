@@ -111,7 +111,7 @@ def create_servo_data(command, servo, mask, angle_cnt, direction, reset_state):
         else:
             servo_data = [0, 0, shoot_angle, roller_pwm, servo_reset]
         
-    return [float(x) for x in servo_data]
+    return [float(x) for x in servo_data], angle_cnt
 
 
 class PublisherCore(Node):
@@ -165,7 +165,7 @@ class PublisherCore(Node):
                 direction=direction
             )
             # 変更箇所：reset_stateを渡す
-            servo_data = create_servo_data(
+            servo_data, self.angle_cnt = create_servo_data(
                 command=servo_command,
                 servo=self.servo,
                 mask=self.servo["mask"],
