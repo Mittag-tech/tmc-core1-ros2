@@ -72,6 +72,19 @@ def create_servo_data(command, servo, mask, angle_cnt, direction, reset_state):
     shoot = bool_toggle(command=command, mask=mask[SHOOT])
     reset = bool_toggle(command=command, mask=mask[RESET])
     
+    if not roller and shoot:
+        status = angle_cnt % (2 * servo["angle"]["interval"])
+        if status < servo["angle"]["interval"]:
+            shoot_angle = servo["angle"]["shoot_angle"]
+        else:
+            shoot_angle = 0
+        angle_cnt +=1
+    else:
+        shoot_angle = 0
+        angle_cnt = 0
+
+    servo_reset = 1 if reset else 0
+
     # RESETボタンが押されたら、RESETシーケンスを開始
     if reset and not reset_state["active"]:
         reset_state["active"] = True
@@ -86,31 +99,13 @@ def create_servo_data(command, servo, mask, angle_cnt, direction, reset_state):
             roller_pwm = servo["roller_pwm"]["min"]
         else:
             reset_state["active"] = False
+        servo_data = [0, roller_pwm, 0, roller_pwm, servo_reset]
     else:
         # 通常のROLLLER処理
         if not roller:
             roller_pwm = servo["roller_pwm"]["motor_on"]
         else:
             roller_pwm = servo["roller_pwm"]["min"]
-    
-    if not roller and shoot:
-        if angle_cnt < servo["angle"]["interval"]:
-            shoot_angle = servo["angle"]["shoot_angle"]
-            angle_cnt += 1
-        elif servo["angle"]["interval"] <= angle_cnt < 2 * servo["angle"]["interval"]:
-            shoot_angle = 0
-            angle_cnt +=1
-        else:
-            angle_cnt = 0
-    else:
-        shoot_angle = 0
-        angle_cnt = 0
-
-    servo_reset = 1 if reset else 0
-
-    if reset_state["active"]:
-        servo_data = [0, roller_pwm, 0, roller_pwm, servo_reset]
-    else:
         if not direction:
             servo_data = [shoot_angle, roller_pwm, 0, 0, servo_reset]
         else:
